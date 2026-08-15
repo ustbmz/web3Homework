@@ -1,0 +1,11 @@
+# 环境变量（含密钥）
+.env
+
+# SQLite 数据库文件
+**/db/*.db
+
+# 编译产物
+**/bin/
+
+# macOS
+.DS_Store
