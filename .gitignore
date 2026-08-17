@@ -1,11 +1,14 @@
-# 环境变量（含密钥）
+# Env files (secrets)
 .env
 
-# SQLite 数据库文件
+# SQLite databases
 **/db/*.db
 
-# 编译产物
+# Build output
 **/bin/
 
 # macOS
 .DS_Store
+
+# Personal notes (not tracked)
+notes/
