@@ -2,6 +2,7 @@
 
 package main
 
+// 删除有序数组中的重复项
 import "fmt"
 
 func removeDuplicates(nums []int) int {
