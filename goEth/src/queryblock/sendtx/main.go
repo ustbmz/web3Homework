@@ -146,14 +146,59 @@ func parseAddress(raw string) (common.Address, error) {
 	return common.HexToAddress(raw), nil
 }
 
+// etherToWei converts a decimal ETH amount to wei with integer arithmetic.
+// big.Float's default 64-bit mantissa cannot represent values such as 0.001
+// exactly; multiplying by 1e18 and truncating with Int drops 1 wei on chain.
 func etherToWei(amount string) (*big.Int, error) {
-	ether, ok := new(big.Float).SetString(amount)
-	if !ok || ether.Sign() <= 0 {
+	whole, frac, ok := splitEther(strings.TrimSpace(amount))
+	if !ok {
 		return nil, fmt.Errorf("AMOUNT_ETH must be a number greater than 0")
 	}
-	wei, _ := new(big.Float).Mul(ether, new(big.Float).SetInt64(params.Ether)).Int(nil)
+	if len(frac) > 18 {
+		if strings.TrimRight(frac[18:], "0") != "" {
+			return nil, fmt.Errorf("AMOUNT_ETH must be an integer number of wei (at most 18 decimal places)")
+		}
+		frac = frac[:18]
+	}
+	frac += strings.Repeat("0", 18-len(frac))
+
+	w, ok := new(big.Int).SetString(whole, 10)
+	if !ok {
+		return nil, fmt.Errorf("AMOUNT_ETH must be a number greater than 0")
+	}
+	f, ok := new(big.Int).SetString(frac, 10)
+	if !ok {
+		return nil, fmt.Errorf("AMOUNT_ETH must be a number greater than 0")
+	}
+	wei := new(big.Int).Add(new(big.Int).Mul(w, big.NewInt(params.Ether)), f)
 	if wei.Sign() <= 0 {
-		return nil, fmt.Errorf("AMOUNT_ETH converts to 0 wei")
+		return nil, fmt.Errorf("AMOUNT_ETH must be a number greater than 0")
 	}
 	return wei, nil
+}
+
+func splitEther(amount string) (whole, frac string, ok bool) {
+	if amount == "" || amount[0] == '-' || amount[0] == '+' {
+		return "", "", false
+	}
+	whole, frac, hasFrac := strings.Cut(amount, ".")
+	if hasFrac && strings.Contains(frac, ".") {
+		return "", "", false
+	}
+	if whole == "" {
+		whole = "0"
+	}
+	if !digitsOnly(whole) || !digitsOnly(frac) {
+		return "", "", false
+	}
+	return whole, frac, true
+}
+
+func digitsOnly(s string) bool {
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
