@@ -143,7 +143,31 @@ func parseAddress(raw string) (common.Address, error) {
 	if !common.IsHexAddress(raw) {
 		return common.Address{}, fmt.Errorf("TO_ADDRESS must be a valid hex address")
 	}
-	return common.HexToAddress(raw), nil
+	addr := common.HexToAddress(raw)
+	if !validEIP55(raw, addr) {
+		return common.Address{}, fmt.Errorf("TO_ADDRESS has an invalid EIP-55 checksum")
+	}
+	if addr == (common.Address{}) {
+		return common.Address{}, fmt.Errorf("TO_ADDRESS must not be the zero address")
+	}
+	return addr, nil
+}
+
+// validEIP55 checks an address against EIP-55.
+// All-lowercase and all-uppercase hex have no checksum and are accepted.
+// Mixed-case letters must match the casing from Address.Hex.
+func validEIP55(raw string, addr common.Address) bool {
+	body := raw
+	switch {
+	case strings.HasPrefix(body, "0x"):
+		body = body[2:]
+	case strings.HasPrefix(body, "0X"):
+		return false
+	}
+	if body == strings.ToLower(body) || body == strings.ToUpper(body) {
+		return true
+	}
+	return body == addr.Hex()[2:]
 }
 
 // etherToWei converts a decimal ETH amount to wei with integer arithmetic.

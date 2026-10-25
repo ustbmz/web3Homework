@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 )
 
@@ -33,6 +34,40 @@ func TestEtherToWeiExact(t *testing.T) {
 		}
 		if got.Cmp(want) != 0 {
 			t.Fatalf("%s: got %s want %s", tc.amount, got, want)
+		}
+	}
+}
+
+func TestParseAddress(t *testing.T) {
+	const checksummed = "0xAe967917c465db8578ca9024c205720b1a3651A9"
+	const badChecksum = "0xae967917c465db8578ca9024c205720b1a3651A9"
+
+	got, err := parseAddress("  " + checksummed + " ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Hex() != checksummed {
+		t.Fatalf("got %s", got.Hex())
+	}
+
+	body := strings.TrimPrefix(checksummed, "0x")
+	if _, err := parseAddress("0x" + strings.ToLower(body)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseAddress("0x" + strings.ToUpper(body)); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, raw := range []string{
+		badChecksum,
+		"0XAe967917c465db8578ca9024c205720b1a3651A9",
+		"0x0000000000000000000000000000000000000000",
+		"0x1234",
+		"",
+		"not-an-address",
+	} {
+		if _, err := parseAddress(raw); err == nil {
+			t.Fatalf("%q: expected error", raw)
 		}
 	}
 }
