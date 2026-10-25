@@ -1,0 +1,26 @@
+{
+  "solidity/homework01/checkMark.sol": {
+    "__sources__": {
+      "solidity/homework01/checkMark.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract Voting {\n    // 候选人得票数\n    mapping(string => uint256) private votes;\n    // 已出现过的候选人，供 resetVotes 遍历\n    string[] private candidates;\n    mapping(string => bool) private isCandidate;\n\n    // 给候选人投一票。第一次出现时记入名单，方便之后重置。\n    function vote(string calldata candidate) public {\n        if (!isCandidate[candidate]) {\n            isCandidate[candidate] = true;\n            candidates.push(candidate);\n        }\n        votes[candidate] += 1;\n    }\n\n    // 查询某个候选人当前的得票数。没投过的候选人返回 0。\n    function getVotes(string calldata candidate) public view returns (uint256) {\n        return votes[candidate];\n    }\n\n    // 把所有候选人的得票数清零，并清空名单，下次投票会重新登记。\n    function resetVotes() public {\n        for (uint256 i = 0; i < candidates.length; i++) {\n            votes[candidates[i]] = 0;\n            isCandidate[candidates[i]] = false;\n        }\n        delete candidates;\n    }\n}\n\ncontract ReverseString {\n    // 反转字符串。例如输入 \"abcde\"，返回 \"edcba\"。\n    function reverseString(string memory str) public pure returns (string memory) {\n        bytes memory chars = bytes(str);\n        uint256 left = 0;\n        uint256 right = chars.length;\n\n        // 从两端向中间交换字符，直到相遇\n        while (left < right) {\n            right--;\n            bytes1 temp = chars[left];\n            chars[left] = chars[right];\n            chars[right] = temp;\n            left++;\n        }\n\n        return string(chars);\n    }\n}\n\n\n",
+        "file": "solidity/homework01/checkMark.sol"
+      }
+    }
+  },
+  "solidity/homework02/BeggingContract.sol": {
+    "__sources__": {
+      "solidity/homework02/BeggingContract.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract BeggingContract {\n    // 合约所有者。只有这个地址可以调用 withdraw 把钱提走。\n    address public owner;\n\n    // 每个捐赠者累计捐了多少 wei。没捐过的地址读出来是 0。\n    mapping(address => uint256) private donations;\n\n    // 部署合约的人成为所有者。msg.sender 是发起这笔部署交易的地址。\n    constructor() {\n        owner = msg.sender;\n    }\n\n    // 捐赠。payable 表示调用时可以附带以太币，附带的金额会进入本合约。\n    // msg.sender 是捐赠者，msg.value 是这次附带的 wei。同一地址多次捐赠会累加。\n    function donate() public payable {\n        donations[msg.sender] += msg.value;\n    }\n\n    // 查询某个地址累计捐赠了多少 wei。view 表示只读，不修改状态。\n    function getDonation(address donor) public view returns (uint256) {\n        return donations[donor];\n    }\n\n    // 所有者提取合约里的全部以太币。\n    // address(this).balance 是合约当前余额。\n    // transfer 要求接收方是 payable 地址，失败时整笔交易回滚。\n    function withdraw() public {\n        require(msg.sender == owner, \"only owner can withdraw\");\n\n        payable(owner).transfer(address(this).balance);\n    }\n}\n",
+        "file": "solidity/homework02/BeggingContract.sol"
+      }
+    }
+  },
+  "hardhat-demo/contracts/Counter.sol": {
+    "__sources__": {
+      "hardhat-demo/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.34;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n    //test\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n",
+        "file": "hardhat-demo/contracts/Counter.sol"
+      }
+    }
+  }
+}
