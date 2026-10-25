@@ -6,6 +6,7 @@
 
 # Build output
 **/bin/
+**/artifacts/
 
 # macOS
 .DS_Store
