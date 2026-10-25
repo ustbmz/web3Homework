@@ -45,3 +45,5 @@ go run ./src/queryblock/sendtx
 ```
 
 `AMOUNT_ETH` 可以省略，默认转 `0.001` ETH。程序会核对 chain ID，余额不够时不会发送。成功后控制台输出 `tx hash`。
+
+![微信图片_20261025114437_301_8](https://files.seeusercontent.com/2026/10/25/q8Ao/_20261025114437_301_8.png)

@@ -4,13 +4,13 @@
 
 ## 目录
 
-| 路径 | 作用 |
-| --- | --- |
+| 路径                      | 作用                              |
+| ----------------------- | ------------------------------- |
 | `contracts/Counter.sol` | 计数器合约，`count` 可读，`increment` 加一 |
-| `build/Counter.abi` | 编译得到的 ABI |
-| `build/Counter.bin` | 编译得到的字节码 |
-| `binding/counter.go` | `abigen` 生成的 Go 绑定，不要手改 |
-| `main.go` | 部署合约、调用 `increment`、打印调用前后的计数值 |
+| `build/Counter.abi`     | 编译得到的 ABI                       |
+| `build/Counter.bin`     | 编译得到的字节码                        |
+| `binding/counter.go`    | `abigen` 生成的 Go 绑定，不要手改         |
+| `main.go`               | 部署合约、调用 `increment`、打印调用前后的计数值  |
 
 合约用 solc 0.8.30 编译。`abigen` 版本与项目依赖一致，是 go-ethereum v1.17.10。
 
@@ -53,3 +53,7 @@ go run ./src/counter
 export CONTRACT_ADDRESS=0x上一次打印的合约地址
 go run ./src/counter
 ```
+
+
+
+![iShot_2026-10-25_11.44.15](https://files.seeusercontent.com/2026/10/25/Fw0h/iShot_2026-10-25_114415.png)
