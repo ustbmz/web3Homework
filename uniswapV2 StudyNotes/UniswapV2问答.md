@@ -1,0 +1,214 @@
+1. 什么是 AMM？它和订单簿模式有什么区别？
+
+2. AMM 的核心算法是什么？
+
+3. 什么是滑点？用户交易时如何避免滑点过高？
+
+4. 什么是三明治攻击？如何降低被三明治攻击的风险？
+
+5. LP 的作用是什么？
+
+6. 什么是无常损失？如何计算？
+
+7. 阅读 Uniswap V2 Core 和 Periphery 合约，整理一份核心接口文档。
+
+   
+
+## 1. 什么是 AMM？它和订单簿模式有什么区别？
+
+AMM 是自动做市商。池子里事先放好两种代币，价格由公式根据储备算出来，谁来换都能立刻成交，不需要另一个人对着挂单。
+
+订单簿是买卖双方各自出价、撮合成交。没有对手方就成交不了，深度靠挂单。
+
+|                | AMM（Uniswap V2）                      | 订单簿           |
+| -------------- | -------------------------------------- | ---------------- |
+| 谁提供流动性   | LP 把两种币放进池子                    | 挂单的人         |
+| 价格从哪来     | \(x \cdot y = k\)                      | 买卖盘撮合       |
+| 能不能立刻成交 | 池子有储备就能换                       | 没有对手方就等   |
+| 价格怎么变     | 你这一笔把储备比例改了，下一笔价格就变 | 下一笔挂单改盘口 |
+
+Uniswap V2 的 AMM 就是每个 Pair 一个资金池。用户不跟另一个人成交，跟池子成交。
+
+## 2. AMM 的核心算法是什么？
+
+核心是恒定乘积：
+
+$$
+x \cdot y = k
+$$
+
+\(x\)、\(y\) 是两种代币储备。换的时候，打进 \(dx\)，拿走 \(dy\)，换完还要满足新的乘积（扣完手续费之后）不小于原来的 \(k\)。
+
+不计手续费：
+
+$$
+(x_0 + dx)(y_0 - dy) = x_0 y_0
+$$
+
+$$
+dy = \frac{dx \cdot y_0}{x_0 + dx}
+$$
+
+实际收 0.30% 手续费，只有 \(0.997\,dx\) 参与计价：
+
+$$
+dy = \frac{997 \cdot dx \cdot y_0}{1000 \cdot x_0 + 997 \cdot dx}
+$$
+
+ `UniswapV2Library.getAmountOut`反过来「要拿到 \(dy\) 得付多少」是 `getAmountIn`。
+
+价格就是储备比 \(P = y / x\)。
+
+![image-20261108185711125](https://files.seeusercontent.com/2026/11/08/R6pb/image-20261108185711125.png)
+
+## 3. 什么是滑点？用户交易时如何避免滑点过高？
+
+滑点是你成交价相对报价时的现货价差了多少。恒定乘积下，你这一笔会把储备推到新位置，所以成交均价一定差于当前 \(y/x\)。池子越浅、你换得越多，滑点越大。多跳路径上每一跳都会叠一层。
+
+Router 用最小值兜底，而不是「尽量少滑」：
+
+- `swapExactTokensForTokens` 带 `amountOutMin`
+- `swapTokensForExactTokens` 带 `amountInMax`
+- 添加/移除流动性带 `amountAMin` / `amountBMin`
+- 还有 `deadline`，超时整笔回滚
+
+报价时用当前储备算出理论输出，再按你能接受的滑点百分比砍一刀，填进 `amountOutMin`。池子太浅就拆小、换路径，或者干脆不换。这些参数防的是链上执行时价格已经变了，不能从根上消掉公式本身带来的滑点。
+
+## 4. 什么是三明治攻击？如何降低被三明治攻击的风险？
+
+三明治攻击是别人夹在你这笔交易前后各做一笔。先顺着你的方向把价格推高（或推低），让你以更差的价格成交，再反向把价格打回来，吃掉你滑点里那一截。你的交易在 mempool 里可见，又给了较宽的 `amountOutMin`，就容易被夹。
+
+这不是合约漏洞，是公开排队加上 AMM 滑点的结果。
+
+能做的是收紧滑点上限，让夹完之后你的 `amountOutMin` 过不了、整笔回滚，夹的人赚不到。另外用私有提交通道，不把交易公开丢进 mempool。大单拆小、走更深的池子，被夹的空间也会小。`deadline` 防的是拖很久才被打包，防不了同一区块里的夹击。
+
+## 5. LP 的作用是什么？
+
+LP 把两种代币按当前比例放进 Pair，换回 LP token，这是池子份额凭证。没有 LP，池子是空的，AMM 换不了。
+
+添加时（池子已有储备）：
+
+$$
+S = \min\left(\frac{dx}{x_0},\ \frac{dy}{y_0}\right) \cdot T
+$$
+
+
+
+![image-20261108190545098](https://files.seeusercontent.com/2026/11/08/Ts3c/image-20261108190545098.png)
+
+移除时按同一比例拿回：
+$$
+dx = \frac{S}{T}\, x_0,\quad dy = \frac{S}{T}\, y_0
+$$
+
+![image-20261108190659582](https://files.seeusercontent.com/2026/11/08/uJ3e/image-20261108190659582.png)
+
+
+
+交易手续费 0.30% 留在池子里，\(k\) 变大，每个 LP 对应的池子变厚。协议若开了 `feeTo`，再从 \(\sqrt{k}\) 的增长里铸 \(\dfrac{1}{6}\) 给协议，剩下 \(\dfrac{5}{6}\) 仍归 LP。
+
+LP 承担无常损失，收入是手续费（以及可能的协议分成之外的那部分）。
+
+
+
+
+
+
+
+## 6. 什么是无常损失？如何计算？
+
+Uniswap V2 的无常损失，是拿「继续做 LP」和「当初那两笔币拿在手里不动」比出来的。价格一离开入场价，池子为了维持 x・ y = k，会把变贵的那边换成变便宜的那边，池子总价值就少一截。价格走回原价，这个差距会消失，所以叫无常。价格走回原价时，这个相对差异在理想情况下会消失。无常损失表示当前 LP 仓位与持币不动相比的价值差异，是否撤出不影响这个差异的计算。
+
+合约里没有专门计算无常损失的函数。无常损失通常不计手续费；做市期间获得的手续费是另一项收益，可能弥补甚至超过无常损失，也可能不足以弥补。
+
+定义：
+
+$$
+IL = \frac{V_1 - V_{\text{hold}}}{V_{\text{hold}}}
+$$
+
+令 \(d = P_1 / P_0\)：
+
+$$
+IL(d) = \frac{2\sqrt{d}}{1 + d} - 1
+$$
+
+\(d = 1\) 时为 0。\(d\) 和 \(1/d\) 结果相同。\(d = 2\) 约 \(-5.7\%\)，\(d = 4\) 是 \(-20\%\)。手续费是另一笔收入，可能盖过，也可能盖不过。
+
+![image-20261108191153031](https://files.seeusercontent.com/2026/11/08/U3bl/image-20261108191153031.png)
+
+ 一般公式
+
+价格为 P 时，储备可以写成：
+$$
+y = L\sqrt{P}, \quad x = \frac{L}{\sqrt{P}}
+$$
+池子价值始终是：
+$$
+V_1 = y + x \cdot P_1 = 2L\sqrt{P_1}
+$$
+拿在手里，是入场时的数量乘上新价格：
+$$
+V_{\text{hold}} = x_0 P_1 + y_0 = L\frac{P_1}{\sqrt{P_0}} + L\sqrt{P_0}
+$$
+令价格倍数 d = P1 / P0，两式相除再减 1：
+$$
+IL(d) = \frac{2\sqrt{d}}{1 + d} - 1
+$$
+验算：
+
+$$
+d = 2,\quad \frac{2\sqrt{2}}{3} - 1 \approx -5.7\%
+$$
+
+$$
+d = \frac{1}{4},\quad \frac{2 \times \tfrac{1}{2}}{\tfrac{5}{4}} - 1 = -20\%
+$$
+
+d 和 1/d 结果相同，曲线在原价两侧对称。价格不动时 d = 1，IL = 0。价格走得越远，分式趋向 0，损失趋向 -100\%，但走得很慢。
+
+## 7. Core 和 Periphery 核心接口
+
+架构：用户走 **Router（Periphery）**，Router 再调 **Factory / Pair（Core）**。Core 不管授权、ETH 包装、路径、滑点；这些都在 Router。Pair 的 `mint`、`burn`、`swap` 是底层接口，不负责 Router 提供的授权、路径和滑点参数处理；但 Pair 自身仍包含重入锁和交易约束检查。
+
+### Factory（Core）
+
+| 方法                                      | 作用                                           |
+| ----------------------------------------- | ---------------------------------------------- |
+| `createPair(tokenA, tokenB)`              | `CREATE2` 部署 Pair，地址可预先用 `pairFor` 算 |
+| `getPair` / `allPairs` / `allPairsLength` | 查交易对                                       |
+| `feeTo` / `setFeeTo`                      | 协议费收款地址，零地址表示关                   |
+| `feeToSetter` / `setFeeToSetter`          | 谁能改 `feeTo`                                 |
+
+### Pair（Core，本身也是 LP ERC20）
+
+状态：`token0` / `token1`、`getReserves`、`price0CumulativeLast` / `price1CumulativeLast`（TWAP）、`kLast`（协议费）。
+
+| 方法                                     | 作用                                                         |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `mint(to)`                               | 按新增余额铸 LP 给 `to`                                      |
+| `burn(to)`                               | 烧掉 Pair 自己持有的 LP，按份额把两种币打给 `to`             |
+| `swap(amount0Out, amount1Out, to, data)` | 先转出，再检查 \(k\)。`data` 非空则回调 `uniswapV2Call`，即 flash swap |
+| `skim(to)`                               | 把余额超出储备的部分转走                                     |
+| `sync()`                                 | 用余额覆盖储备                                               |
+| `permit`                                 | 链下签名授权 LP，少一次 `approve`                            |
+
+回调接口 `IUniswapV2Callee.uniswapV2Call(sender, amount0, amount1, data)` 由收款合约实现。
+
+### Library（Periphery，被 Router 用）
+
+`sortTokens`、`pairFor`、`getReserves`、`quote`（按比例、不加手续费）、`getAmountOut` / `getAmountIn`、`getAmountsOut` / `getAmountsIn`（多跳）。
+
+### Router01 / Router02（Periphery）
+
+用户真正该调的入口。`factory`、`WETH` 不可变。
+
+- 添加：`addLiquidity`、`addLiquidityETH`
+- 移除：`removeLiquidity`、`removeLiquidityETH`，以及 `WithPermit` 版本
+- 兑换：`swapExact*` / `swap*ForExact*`，代币和 ETH 各一套
+- 报价：把 Library 的 `quote` / `getAmount*` 暴露成 `public`
+- deadline: Router 的交易类入口通常带有`deadline`
+
+Router02 在 01 上加了 `SupportingFeeOnTransferTokens`：转账税代币不能用「算出来的 amount」当实际到账，只能按余额差来转。
+
+读合约时可以按调用链走：Router.`addLiquidity` → `pairFor` / `createPair` → `transferFrom` → Pair.`mint`；Router.`removeLiquidity` → `transferFrom` LP → Pair.`burn`；Router.`swapExactTokensForTokens` → `getAmountsOut` → 把输入打进第一跳 Pair → Pair.`swap`（`data` 为空）。Flash swap 不走 Router，自己调 Pair.`swap` 并实现 `uniswapV2Call`。
