@@ -1,0 +1,18 @@
+# Env files (secrets)
+.env
+
+# SQLite databases
+**/db/*.db
+
+# Build output
+**/bin/
+**/artifacts/
+
+# macOS
+.DS_Store
+
+# Personal notes (not tracked)
+notes/
+
+# Local Cursor rules
+goEth/.cursor/
