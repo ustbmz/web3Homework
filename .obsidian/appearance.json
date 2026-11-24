@@ -1,0 +1,13 @@
+{
+  "baseFontSize": 16,
+  "theme": "obsidian",
+  "cssTheme": "Things",
+  "translucency": false,
+  "nativeMenus": true,
+  "showViewHeader": true,
+  "showRibbon": true,
+  "accentColor": "",
+  "enabledCssSnippets": [
+    "nowrap-short-cols"
+  ]
+}

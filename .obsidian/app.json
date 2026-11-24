@@ -1,0 +1,19 @@
+{
+  "livePreview": true,
+  "attachmentFolderPath": "assets",
+  "newFileLocation": "current",
+  "alwaysUpdateLinks": true,
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "showUnsupportedFiles": false,
+  "showInlineTitle": true,
+  "trashOption": "local",
+  "promptDelete": false,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "userIgnoreFilters": [
+    "backup/solidity/homework03/nft-auction-market/node_modules/",
+    "backup/lesson04/ApiuseGIN/bin/",
+    ".trash/"
+  ]
+}

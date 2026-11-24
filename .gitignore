@@ -16,3 +16,12 @@ notes/
 
 # Local Cursor rules
 goEth/.cursor/
+
+# Obsidian：只忽略个人界面状态与缓存，配置本身保留（换机器可复现）
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
+# 第三方主题（Obsidian 官方社区主题可随时重新下载）
+.obsidian/themes/
+.trash/
