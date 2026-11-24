@@ -196,36 +196,15 @@ jp 总量 = settleAmountLend × martgageRate / 1e8
 整个项目围着一张状态机转。**先背这张图，再看函数。**
 
 ```mermaid
-stateDiagram-v2
-    [*] --> MATCH: createPoolInfo 建池
-    MATCH --> EXECUTION: settle 双边都有资金
-    MATCH --> UNDONE: settle 任一方为 0
-    EXECUTION --> FINISH: finish 到期卖抵押物还本息
-    EXECUTION --> LIQUIDATION: liquidate 抵押物跌破阈值
-    FINISH --> [*]
-    LIQUIDATION --> [*]
-    UNDONE --> [*]
-
-    note right of MATCH
-        settleTime 之前
-        双方只能存款
-    end note
-    note right of EXECUTION
-        可 refund 超额、claim 凭证
-        借款人领 jp 并提走稳定币
-    end note
-    note right of FINISH
-        endTime 之后
-        burn 凭证分钱
-    end note
-    note right of LIQUIDATION
-        整池出局
-        放款人优先分清算所得
-    end note
-    note right of UNDONE
-        募集失败
-        原路紧急提取
-    end note
+flowchart TD
+    startNode([开始]) -->|createPoolInfo 建池| matchNode["MATCH<br/>settleTime 之前，双方只能存款"]
+    matchNode -->|settle 双边都有资金| execNode["EXECUTION<br/>可 refund 超额、claim 凭证<br/>借款人领 jp 并提走稳定币"]
+    matchNode -->|settle 任一方为 0| undoneNode["UNDONE<br/>募集失败，原路紧急提取"]
+    execNode -->|finish 到期卖抵押物还本息| finishNode["FINISH<br/>endTime 之后，burn 凭证分钱"]
+    execNode -->|liquidate 抵押物跌破阈值| liqNode["LIQUIDATION<br/>整池出局，放款人优先分清算所得"]
+    finishNode --> endNode([结束])
+    liqNode --> endNode
+    undoneNode --> endNode
 ```
 
 时间轴：

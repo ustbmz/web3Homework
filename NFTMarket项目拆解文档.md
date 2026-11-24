@@ -211,7 +211,7 @@ flowchart LR
 
 ## 6. 完整用户旅程
 
-![](./NFTMarket.png)
+![](https://files.seeusercontent.com/2026/11/24/nbF9/NFTMarket.png)
 
 ### 6.1 卖家挂单
 
