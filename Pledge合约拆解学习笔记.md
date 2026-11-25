@@ -585,17 +585,44 @@ withdraw
 能不看代码答出下面 10 题，合约部分就算过关：
 
 1. `depositLend` / `depositBorrow` 会铸 sp/jp 吗？成交部分在哪个函数铸？
+
+   不会。sp 在 `claimLend` 铸，jp 在 `claimBorrow` 铸。
+
 2. settle 转不转钱？成交额两个字段怎么来？
+
+   不转钱。抵押物按价格和抵押率换成可借额，再和放款人存入额取较小的一边，写成 `settleAmountLend` 和 `settleAmountBorrow`。
+
 3. 固定利率的「固定」锁在哪几个参数上？
+
+   `settleTime`、`endTime`、`interestRate`。建池时写死。
+
 4. 借款人是在哪一个函数里拿到稳定币的？
+
+   `claimBorrow`。铸 jp 的同时把成交的稳定币打给借款人。
+
 5. jp 的数量为什么等于 `settleAmountLend × martgageRate`？
+
+   jp 记的是这笔债对应的抵押物份额，所以用成交本金乘抵押率，再除 `1e8`。
+
 6. finish 失败（滑点）时，状态会不会变成 FINISH？
+
+   不会。`require(amountIn >= lendAmount)` 失败整笔回滚，状态还是 EXECUTION。
+
 7. liquidate 比 finish 少了哪一句保护？亏的是谁？
+
+   少了 `require(amountIn >= lendAmount)`。换不够的部分记在 `liquidationAmounLend` 上，放款人可能收不回全额。
+
 8. 清算是按人还是按池？
+
+   按池。一个池子清算，该池所有借款人一起出局。
+
 9. `validCall` 批准的是函数，还是「调用者 × 合约」？
+
+   「调用者 × 合约」。签过之后，这个调用者可以调该合约上所有挂了 `validCall` 的函数。
+
 10. 管理员不调用 finish，用户拿着 sp 能不能把本息取走？卡在什么状态？
 
-卡在第 10 题是正常的：这正是本项目「无链上定时器」要记住的产品风险。
+    不能。`withdrawLend` 要等 FINISH 或 LIQUIDATION。钱停在 EXECUTION，卡在池子里。
 
 ---
 

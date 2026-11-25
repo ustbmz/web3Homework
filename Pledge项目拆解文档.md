@@ -543,20 +543,33 @@ userBorrowInfo[user][pid] = 同上
 能不看代码回答下面这些问题，就算达到拆解阶段的要求：
 
 1. `depositLend` 这一笔里铸不铸 spToken？成交的那部分在哪个函数铸，没成交的怎么退？
+
+   `depositLend` 这一笔不铸 sp。成交的部分在 `claimLend` 按 `settleAmountLend` 铸，没成交的由 `refundLend` 退回稳定币。
+
 2. `settle` 转不转钱？成交额两个数字怎么来的？
+
+   `settle` 不转钱。抵押物按预言机价格和抵押率换成可借额，再和放款人存入额取较小的一边，写成 `settleAmountLend` 和 `settleAmountBorrow`。
+
 3. 固定利率的「固定」体现在哪几个参数上？
+
+   固定利率锁在 `_settleTime`、`_endTime`、`_interestRate`。
+
 4. 放款人到期拿钱，走的是哪笔余额（`finishAmountLend` 还是原来的 `stakeAmount`）？
+
+   到期拿的是 `finishAmountLend`，不是 `stakeAmount`。
+
 5. 后端 schedule 会不会帮池子调用 `settle`？
+
+   不会。schedule 只轮询 view，把池子抄进数据库。
+
 6. 前端市场列表的 logo 和利率，分别来自哪里？
+
+   利率来自链上字段。logo 是后端拼上去的。
+
 7. 如果管理员一直不调用 `finish`，用户的钱在哪、能不能自己取？
+
+   执行期内用户只能 refund / claim，**不能** `withdrawLend`。withdraw 必须等到 FINISH 或 LIQUIDATION。管理员不点 `finish`，资金会一直锁在池里——这是「无 cron + 多签推进状态机」的最大产品风险，也是讲架构时最有说服力的一句。
+
 8. 换一个「固定期限债券」项目，你准备先打开哪个合约函数？
 
-答：
-
-1. `depositLend` 这一笔不铸 sp。成交的部分在 `claimLend` 按 `settleAmountLend` 铸，没成交的由 `refundLend` 退回稳定币。
-2. `settle` 不转钱。
-3. 固定利率锁在 `_settleTime`、`_endTime`、`_interestRate`。
-4. 到期拿的是 `finishAmountLend`，不是 `stakeAmount`。
-5. 换一个固定期限项目，先打开 `createPoolInfo`。
-6. 不答
-7. 执行期内用户只能 refund / claim，**不能** `withdrawLend`。withdraw 必须等到 FINISH 或 LIQUIDATION。管理员不点 `finish`，资金会一直锁在池里——这是「无 cron + 多签推进状态机」的最大产品风险，也是讲架构时最有说服力的一句。
+   换一个固定期限项目，先打开 `createPoolInfo`。
